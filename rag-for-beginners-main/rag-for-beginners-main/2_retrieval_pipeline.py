@@ -37,6 +37,8 @@ for i, doc in enumerate(relevant_docs, 1):
     print(f"Document {i}:\n{doc.page_content}\n")
 
 
+ 
+
 # Synthetic Questions: 
 
 # 1. "What was NVIDIA's first graphics accelerator called?"
