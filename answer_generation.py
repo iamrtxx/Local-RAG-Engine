@@ -8,33 +8,37 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 load_dotenv()
 
-# 1. Fetch all active models dynamically from your Groq account
+# 1. Groq ke active models fetch aur strictly clean chat models filter karna
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 all_models = [m.id for m in client.models.list().data]
 
-print("Tumhare account par active Groq models:")
-for m_id in all_models:
-    print(f"- {m_id}")
-
-# Auto-select: Jo bhi working model list mein mile usay automatically pick kar lo
-preferred_models = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "gemma2-9b-it",
-    "mixtral-8x7b-32768"
+# Third-party, gated aur non-chat models ko filter out karna
+clean_chat_models = [
+    m for m in all_models 
+    if not any(bad in m.lower() for bad in ["guard", "whisper", "audio", "vision", "canopy", "orpheus", "/"])
 ]
 
+print("Tumhare account par available pure Chat models:")
+for m in clean_chat_models:
+    print(f"- {m}")
+
+# Substring matching: inme se jo bhi match ho jaye pick kar lo
+keywords = ["llama-3.3", "llama-3.1", "gemma", "mixtral", "qwen", "llama"]
+
 selected_model = None
-for pref in preferred_models:
-    if pref in all_models:
-        selected_model = pref
+for kw in keywords:
+    for m in clean_chat_models:
+        if kw in m.lower():
+            selected_model = m
+            break
+    if selected_model:
         break
 
-# Fallback agar preferred list match na ho toh pehla model utha lo
-if not selected_model and all_models:
-    selected_model = all_models[0]
+# Safe Fallback
+if not selected_model and clean_chat_models:
+    selected_model = clean_chat_models[0]
 
-print(f"\n--> Selected Active Model for Generation: '{selected_model}'\n")
+print(f"\n--> Auto-Selected Chat Model: '{selected_model}'\n")
 
 # 2. Vector DB & Local Embeddings Setup
 persistent_directory = "db/chroma_db"
@@ -50,7 +54,7 @@ db = Chroma(
 )
 
 # 3. Search Query
-query = "What was Microsoft's first hardware product release?"
+query = "What was NVIDIA's first graphics accelerator called?"
 
 print(f"\nRunning semantic search for: '{query}'")
 retriever = db.as_retriever(search_kwargs={"k": 5})
@@ -78,7 +82,7 @@ else:
     
     human_prompt = f"Documents:\n{context_text}\n\nQuestion: {query}"
 
-    # 5. Dynamic LLM Call
+    # 5. LLM Call
     model = ChatGroq(
         model=selected_model,
         temperature=0.1
